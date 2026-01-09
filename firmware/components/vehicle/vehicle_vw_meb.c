@@ -43,8 +43,9 @@
 #define UDS_REAR_TORQUE   8
 #define UDS_GEAR_POSITION 9
 #define UDS_SPEED         10
+#define UDS_HV_CELL_VOLT  11
 
-#define NUM_UDS_REQ_ITEMS 11
+#define NUM_UDS_REQ_ITEMS 12
 
 // Gear position constants
 #define GEAR_PARK         0x08
@@ -76,12 +77,15 @@ const vehicle_config_t vehicle_vw_meb_rwd =
 	DB_ITEM_HV_BATT_V | DB_ITEM_HV_BATT_I | DB_ITEM_HV_BATT_MIN_T | DB_ITEM_HV_BATT_MAX_T | \
 	DB_ITEM_LV_BATT_V | DB_ITEM_LV_BATT_I | \
 	DB_ITEM_AUX_KW | DB_ITEM_REAR_TORQUE | \
-	DB_ITEM_SPEED | DB_ITEM_GPS_ELEVATION,
+	DB_ITEM_SPEED | DB_ITEM_GPS_ELEVATION | \
+	DB_ITEM_HV_CELL_V,
+	96,                 // Number of cells in HV battery
 	{-200.0, 300.0},    // power_kw_range
 	{0.0, 16.0},        // aux_kw_range
 	{-150.0, 350.0},    // torque_nm_range
 	{-400.0, 600.0},    // hv_batt_i_range
 	{10.0, 16.0},       // lv_batt_v_range
+	{3.0, 4.2},         // hv_batt_cell_range
 	true,               // 500k CAN
 	500,                // Request timeout (mSec)
 	_vw_meb_init,
@@ -97,12 +101,15 @@ const vehicle_config_t vehicle_vw_meb_awd =
 	DB_ITEM_HV_BATT_V | DB_ITEM_HV_BATT_I | DB_ITEM_HV_BATT_MIN_T | DB_ITEM_HV_BATT_MAX_T | \
 	DB_ITEM_LV_BATT_V | DB_ITEM_LV_BATT_I | \
 	DB_ITEM_AUX_KW | DB_ITEM_FRONT_TORQUE | DB_ITEM_REAR_TORQUE | \
-	DB_ITEM_SPEED | DB_ITEM_GPS_ELEVATION,
+	DB_ITEM_SPEED | DB_ITEM_GPS_ELEVATION | \
+	DB_ITEM_HV_CELL_V,
+	96,                 // Number of cells in HV battery
 	{-200.0, 300.0},    // power_kw_range
 	{0.0, 16.0},        // aux_kw_range
 	{-150.0, 350.0},    // torque_nm_range
 	{-400.0, 800.0},    // hv_batt_i_range
 	{10.0, 16.0},       // lv_batt_v_range
+	{3.0, 4.2},         // hv_batt_cell_range
 	true,               // 500k CAN
 	500,                // Request timeout (mSec)
 	_vw_meb_init,
@@ -118,18 +125,19 @@ const vehicle_config_t vehicle_vw_meb_awd =
 // Vehicle UDS service CAN request packets (must match list of indicies)
 //
 //                                                 Req ID      Rsp ID         PCI   SID
-static const can_request_t req_12v_batt_info   = {     0x710,      0x77A, 8, {0x03, 0x22, 0x2A, 0xF7, 0x00, 0x00, 0x00, 0x00}};
-//static const can_request_t req_hv_ptc_current  = {0x17fc007b, 0x17fe007b, 8, {0x03, 0x22, 0x16, 0x20, 0x00, 0x00, 0x00, 0x00}}; // Not necessary (in Aux)
-static const can_request_t req_gps_info        = {     0x767,      0x7D1, 8, {0x03, 0x22, 0x24, 0x30, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_aux_power       = {0x17fc0076, 0x17fe0076, 8, {0x03, 0x22, 0x03, 0x64, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_hv_batt_current = {0x17fc007b, 0x17fe007b, 8, {0x03, 0x22, 0x1E, 0x3D, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_hv_batt_min_t   = {0x17fc007b, 0x17fe007b, 8, {0x03, 0x22, 0x1E, 0x0F, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_hv_batt_max_t   = {0x17fc007b, 0x17fe007b, 8, {0x03, 0x22, 0x1E, 0x0E, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_hv_batt_volt    = {0x17fc007b, 0x17fe007b, 8, {0x03, 0x22, 0x1E, 0x3B, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_front_torque    = {0x17fc0076, 0x17fe0076, 8, {0x03, 0x22, 0x03, 0x35, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_rear_torque     = {0x17fc0076, 0x17fe0076, 8, {0x03, 0x22, 0x03, 0x3B, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_gear_pos        = {0x17fc0076, 0x17fe0076, 8, {0x03, 0x22, 0x21, 0x0E, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_speed           = {0x18DB33F1, 0x18DAF101, 8, {0x02, 0x01, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x00}};
+static const can_request_t req_12v_batt_info   = {     0x710,      0x77A, 8, {0x03, 0x22, 0x2A, 0xF7, 0x00, 0x00, 0x00, 0x00}, false, 0};
+//static const can_request_t req_hv_ptc_current  = {0x17fc007b, 0x17fe007b, 8, {0x03, 0x22, 0x16, 0x20, 0x00, 0x00, 0x00, 0x00}, false, 0}; // Not necessary (in Aux)
+static const can_request_t req_gps_info        = {     0x767,      0x7D1, 8, {0x03, 0x22, 0x24, 0x30, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_aux_power       = {0x17fc0076, 0x17fe0076, 8, {0x03, 0x22, 0x03, 0x64, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_hv_batt_current = {0x17fc007b, 0x17fe007b, 8, {0x03, 0x22, 0x1E, 0x3D, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_hv_batt_min_t   = {0x17fc007b, 0x17fe007b, 8, {0x03, 0x22, 0x1E, 0x0F, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_hv_batt_max_t   = {0x17fc007b, 0x17fe007b, 8, {0x03, 0x22, 0x1E, 0x0E, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_hv_batt_volt    = {0x17fc007b, 0x17fe007b, 8, {0x03, 0x22, 0x1E, 0x3B, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_front_torque    = {0x17fc0076, 0x17fe0076, 8, {0x03, 0x22, 0x03, 0x35, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_rear_torque     = {0x17fc0076, 0x17fe0076, 8, {0x03, 0x22, 0x03, 0x3B, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_gear_pos        = {0x17fc0076, 0x17fe0076, 8, {0x03, 0x22, 0x21, 0x0E, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_speed           = {0x18DB33F1, 0x18DAF101, 8, {0x02, 0x01, 0x0D, 0x00, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_hv_cell_volt    = {0x17fc007b, 0x17fe007b, 8, {0x03, 0x22, 0x1E, 0x40, 0x00, 0x00, 0x00, 0x00}, true, 3};  // data[3] is index base value
 
 static const can_request_t* req_full_listP[NUM_UDS_REQ_ITEMS] = {
 	&req_12v_batt_info,
@@ -142,7 +150,8 @@ static const can_request_t* req_full_listP[NUM_UDS_REQ_ITEMS] = {
 	&req_front_torque,
 	&req_rear_torque,
 	&req_gear_pos,
-	&req_speed
+	&req_speed,
+	&req_hv_cell_volt
 };
 
 
@@ -160,6 +169,8 @@ static bool saw_error = false;
 static bool saw_response = false;
 static int req_index = 0;
 static int num_req_entries = 0;
+static int indexed_val_index = 0;
+static int num_indexed_vals = 0;
 
 // Partial data values
 static bool in_reverse = false;
@@ -178,6 +189,9 @@ static void _vw_meb_init()
 
 static void _vw_meb_eval()
 {
+	bool inc_req_index = false;
+	uint8_t req_data[8];
+	
 	// Handle any responses or timeout
 	if (req_in_process) {
 		if (saw_error || saw_response || req_timeout) {
@@ -199,8 +213,14 @@ static void _vw_meb_eval()
 #ifdef DEBUG_DATA
 			ESP_LOGI(TAG, "TX: id = %lx, rsp = %lx, len = %d", req_listP[req_index]->req_id, req_listP[req_index]->rsp_id, req_listP[req_index]->req_len);
 #endif
-
-		if (can_tx_packet(req_listP[req_index]->req_id, req_listP[req_index]->rsp_id, req_listP[req_index]->req_len, req_listP[req_index]->data)) {
+		// Local copy of data in case we have to modify it before sending it
+		memcpy(req_data, req_listP[req_index]->data, (size_t) req_listP[req_index]->req_len);
+		if (req_listP[req_index]->is_indexed) {
+			// Set index data byte with current index
+			req_data[req_listP[req_index]->index_loc] = req_listP[req_index]->data[req_listP[req_index]->index_loc] + indexed_val_index++;
+		}
+		
+		if (can_tx_packet(req_listP[req_index]->req_id, req_listP[req_index]->rsp_id, req_listP[req_index]->req_len, req_data)) {
 			saw_error = false;
 		} else {
 			saw_error = true;
@@ -208,9 +228,25 @@ static void _vw_meb_eval()
 		}
 		
 		// Setup for next request
-		req_index += 1;
-		if (req_index >= num_req_entries) {
-			req_index = 0;
+		if (req_listP[req_index]->is_indexed) {
+			if (indexed_val_index >= num_indexed_vals) {
+				inc_req_index = true;
+			}
+		} else {
+			inc_req_index = true;
+		}
+		
+		if (inc_req_index) {
+			req_index += 1;
+			if (req_index >= num_req_entries) {
+				req_index = 0;
+			}
+			
+			// Handle indexed requests
+			if (req_listP[req_index] == req_full_listP[UDS_HV_CELL_VOLT]) {
+				indexed_val_index = 0;
+				num_indexed_vals = vm_get_indexed_item_count(DB_ITEM_HV_CELL_V);
+			}
 		}
 	}
 }
@@ -233,15 +269,22 @@ static void _vw_meb_set_req_mask(uint32_t mask)
 	required_req[UDS_REAR_TORQUE]   = vm_mask_check(mask, DB_ITEM_REAR_TORQUE);
 	required_req[UDS_GEAR_POSITION] = vm_mask_check(mask, DB_ITEM_FRONT_TORQUE | DB_ITEM_REAR_TORQUE);
 	required_req[UDS_SPEED]         = vm_mask_check(mask, DB_ITEM_SPEED);
+	required_req[UDS_HV_CELL_VOLT]  = vm_mask_check(mask, DB_ITEM_HV_CELL_V);
 	
 	// Build up our list of requests and reset starting point
 	num_req_entries = 0;
 	req_index = 0;
+	indexed_val_index = 0;
 	for (int i=0; i<NUM_UDS_REQ_ITEMS; i++) {
 		if (required_req[i]) {
 			num_req_entries += 1;
 			req_listP[n++] = (can_request_t*) req_full_listP[i];
 		}
+	}
+	if (req_listP[req_index] == req_full_listP[UDS_HV_CELL_VOLT]) {
+		num_indexed_vals = vm_get_indexed_item_count(DB_ITEM_HV_CELL_V);
+	} else {
+		num_indexed_vals = 0;
 	}
 }
 
@@ -361,6 +404,21 @@ static void _vw_meb_rx_data(uint32_t id, int len, uint8_t* data)
 			if (len == 3) {
 				f = (float) data[2];
 				vm_update_data_item(DB_ITEM_SPEED, f);
+			}
+			break;
+			
+		case UDS_HV_CELL_VOLT:
+			if (len == 5) {
+				u16 = (data[3] << 8) | data[4];
+				f = ((float) u16 / 1000.0) + 1.0;
+				i16 = data[2] - req_full_listP[UDS_HV_CELL_VOLT]->data[req_full_listP[UDS_HV_CELL_VOLT]->index_loc];
+				if (i16 == (vm_get_indexed_item_count(DB_ITEM_HV_CELL_V) - 1)) {
+					// Final index value
+					vm_update_indexed_data_item(DB_ITEM_HV_CELL_V, (int) i16, f, true);
+				} else {
+					// Intermediate index value
+					vm_update_indexed_data_item(DB_ITEM_HV_CELL_V, (int) i16, f, false);
+				}
 			}
 			break;
 	}

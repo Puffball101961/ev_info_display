@@ -125,11 +125,13 @@ int vm_get_resp_index(uint32_t resp_can_id, int resp_data_len, uint8_t* resp_dat
 	
 	// Must at least have a UDS packet length (byte 0) and service ID (byte 1)
 	if (resp_data_len < 2) {
+		ESP_LOGE(TAG, "Illegal UDS packet length for rsp %lx", resp_can_id);
 		return -1;
 	}
 	
 	// Must not be a negative response
 	if (resp_data[0] == 0x7F) {
+		ESP_LOGI(TAG, "Received negative response for rsp %lx", resp_can_id);
 		return -1;
 	}
 	
@@ -147,7 +149,10 @@ int vm_get_resp_index(uint32_t resp_can_id, int resp_data_len, uint8_t* resp_dat
 				n = req_list[i]->data[0] - 1;  // Count of additional subfunction/DID bytes in request (beyond SID)
 				j = 2;
 				while (n--) {
-					match &= (resp_data[j-1] == req_list[i]->data[j]);
+					// Check all but index bytes
+					if (!(req_list[i]->is_indexed && (req_list[i]->index_loc == j))) {
+						match &= (resp_data[j-1] == req_list[i]->data[j]);
+					}
 					j += 1;
 				}
 			}
@@ -166,6 +171,12 @@ int vm_get_resp_index(uint32_t resp_can_id, int resp_data_len, uint8_t* resp_dat
 void vm_update_data_item(uint32_t mask, float val)
 {
 	db_set_data_item_value(mask, val);
+}
+
+
+void vm_update_indexed_data_item(uint32_t mask, int index, float val, bool is_final)
+{
+	db_set_indexed_data_item_value(mask, index, val, is_final);
 }
 
 
@@ -212,6 +223,21 @@ const char* vm_get_vehicle_name(int n)
 }
 
 
+int vm_get_indexed_item_count(uint32_t mask)
+{
+	// Return values for indexed items
+	if (mask & DB_ITEM_HV_CELL_V) {
+		if (cur_vehicleP != NULL) {
+			return cur_vehicleP->num_cells;
+		} else {
+			return 0;
+		}
+	} else {
+		return 0;
+	}
+}
+
+
 uint32_t vm_get_supported_item_mask()
 {
 	if (cur_vehicleP != NULL) {
@@ -254,6 +280,10 @@ bool vm_get_range(int index, float* min, float* max)
 			case VM_RANGE_LV_BATTV:
 				*min = cur_vehicleP->lv_batt_v_range.min;
 				*max = cur_vehicleP->lv_batt_v_range.max;
+				break;
+			case VM_RANGE_HV_CELLV:
+				*min = cur_vehicleP->hv_batt_cell_range.min;
+				*max = cur_vehicleP->hv_batt_cell_range.max;
 				break;
 			default:
 				success = false;

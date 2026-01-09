@@ -22,6 +22,7 @@
 #include "esp_system.h"
 #include "gui_screen_main.h"
 #include "gui_task.h"
+#include "gui_tile_cells.h"
 #include "gui_tile_electrical.h"
 #include "gui_tile_power.h"
 #include "gui_tile_settings.h"
@@ -95,6 +96,7 @@ lv_obj_t* gui_screen_main_init()
 	gui_tile_torque_init(tileview, &cur_tile_index);
 	gui_tile_power_init(tileview, &cur_tile_index);
 	gui_tile_electrical_init(tileview, &cur_tile_index);
+	gui_tile_cells_init(tileview, &cur_tile_index);
 	gui_tile_timed_init(tileview, &cur_tile_index);
 	gui_tile_settings_init(tileview, &cur_tile_index);
 	

@@ -85,7 +85,7 @@ static int32_t lv_t = 0;
 // Forward declarations for internal functions
 //
 static void _gui_tile_electrical_set_active(bool en);
-static void _gui_tile_electrical_setup_vehicle();
+static bool _gui_tile_electrical_setup_vehicle();
 static void _gui_tile_electrical_setup_hv_i_meter();
 static void _gui_tile_electrical_setup_hv_v_display();
 static void _gui_tile_electrical_setup_hv_t_display();
@@ -114,49 +114,51 @@ static void _gui_tile_electrical_lv_t_cb(float val);
 //
 void gui_tile_electrical_init(lv_obj_t* parent_tileview, int* tile_index)
 {
-	// Create our object
-	tile = lv_tileview_add_tile(parent_tileview, *tile_index, 0, LV_DIR_LEFT | LV_DIR_RIGHT);
-	*tile_index += 1;
-	
+	bool draw_tile;
+		
 	gui_get_screen_size(&tile_w, &tile_h);
 	
 	// Determine our capabilities
-	_gui_tile_electrical_setup_vehicle();
+	draw_tile = _gui_tile_electrical_setup_vehicle();
 	
-	// Create display objects
-	if (has_hv_i) {
-		// Only display HV objects if we can draw the meter (no doubt we'll always have this)
-		_gui_tile_electrical_setup_hv_i_meter();
-		
-		if (has_hv_v) {
-			_gui_tile_electrical_setup_hv_v_display();
-		}
-		
-		if (has_hv_min_t || has_hv_max_t) {
-			_gui_tile_electrical_setup_hv_t_display();
-		}
-	}
+	if (draw_tile) {
+		// Create our object
+		tile = lv_tileview_add_tile(parent_tileview, *tile_index, 0, LV_DIR_LEFT | LV_DIR_RIGHT);
+		*tile_index += 1;
 	
-	if (has_lv_v) {
-		// Only display LV objects if we can draw the meter
-		_gui_tile_electrical_setup_lv_v_meter();
-		
-		if (has_lv_i) {
-			_gui_tile_electrical_setup_lv_i_display();
+		// Create display objects
+		if (has_hv_i) {
+			// Only display HV objects if we can draw the meter (no doubt we'll always have this)
+			_gui_tile_electrical_setup_hv_i_meter();
+			
+			if (has_hv_v) {
+				_gui_tile_electrical_setup_hv_v_display();
+			}
+			
+			if (has_hv_min_t || has_hv_max_t) {
+				_gui_tile_electrical_setup_hv_t_display();
+			}
 		}
 		
-		if (has_lv_t) {
-			_gui_tile_electrical_setup_lv_t_display();
+		if (has_lv_v) {
+			// Only display LV objects if we can draw the meter
+			_gui_tile_electrical_setup_lv_v_meter();
+			
+			if (has_lv_i) {
+				_gui_tile_electrical_setup_lv_i_display();
+			}
+			
+			if (has_lv_t) {
+				_gui_tile_electrical_setup_lv_t_display();
+			}
 		}
-	}
-	
-	// Register ourselves with our parent if we're capable of displaying something
-	if (has_hv_i || has_lv_v) {
+		
+		// Register ourselves with our parent if we're capable of displaying something
 		gui_screen_main_register_tile(tile, _gui_tile_electrical_set_active);
+		
+		// Get our display units
+		units_metric = gui_is_metric();
 	}
-	
-	// Get our display units
-	units_metric = gui_is_metric();
 }
 
 
@@ -236,7 +238,7 @@ static void _gui_tile_electrical_set_active(bool en)
 }
 
 
-static void _gui_tile_electrical_setup_vehicle()
+static bool _gui_tile_electrical_setup_vehicle()
 {
 	uint32_t capability_mask;
 	
@@ -257,6 +259,8 @@ static void _gui_tile_electrical_setup_vehicle()
 	if (has_lv_v) {
 		vm_get_range(VM_RANGE_LV_BATTV, &lv_v_min, &lv_v_max);
 	}
+	
+	return (has_hv_i || has_lv_v);
 }
 
 
@@ -459,9 +463,9 @@ static void _gui_tile_electrical_set_hv_i_meter_cb(void* indic, int32_t val)
 {
 	if (val < 0) {
 		lv_arc_set_value(hv_i_pos_arc, 0);
-		lv_arc_set_value(hv_i_neg_arc, ((int32_t) round(-hv_i_min)) + val);
+		lv_arc_set_value(hv_i_neg_arc, -val);
 	} else {
-		lv_arc_set_value(hv_i_neg_arc, (int32_t) round(-hv_i_min));
+		lv_arc_set_value(hv_i_neg_arc, 0);
 		lv_arc_set_value(hv_i_pos_arc, val);
 	}
 }

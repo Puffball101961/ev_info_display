@@ -52,7 +52,7 @@ void can_task()
 	ESP_LOGI(TAG, "Start task");
 	
 	// Delay to let GUI task start first
-	vTaskDelay(pdMS_TO_TICKS(250));
+	vTaskDelay(pdMS_TO_TICKS(100));
 	
 	// Get the system configuration
 	if (!ps_get_config(PS_CONFIG_TYPE_MAIN, (void**) &configP)) {

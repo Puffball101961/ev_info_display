@@ -26,6 +26,7 @@
 #include "data_broker.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include "vehicle_manager.h"
 #include <stdio.h>
 
 
@@ -34,7 +35,9 @@
 //
 static bool gui_item_fast_average = false;
 static gui_item_value_handler gui_handler_list[DB_MAX_ITEMS];
-static float gui_item_value_list[2][DB_MAX_ITEMS];
+static gui_indexed_item_value_handler gui_indexed_handler_list[DB_MAX_ITEMS];
+static float gui_item_value_list[2][DB_MAX_ITEMS];             // For single-value averaged items
+static float gui_cell_v_list[DB_MAX_CELL_V_VALS];              // For DB_ITEM_HV_CELL_V
 static uint32_t gui_item_updated_mask;
 
 static SemaphoreHandle_t update_mutex;
@@ -54,6 +57,7 @@ esp_err_t db_init()
 {
 	for (int i=0; i<DB_MAX_ITEMS; i++) {
 		gui_handler_list[i] = NULL;
+		gui_indexed_handler_list[i] = NULL;
 		gui_item_value_list[0][i] = 0;
 	}
 	
@@ -70,14 +74,30 @@ void db_enable_fast_average(bool en)
 
 void db_gui_eval()
 {
+	int n;
+	
 	xSemaphoreTake(update_mutex, portMAX_DELAY);
 	for (int i=0; i<DB_MAX_ITEMS; i++) {
 		if ((gui_item_updated_mask & (1 << i)) != 0) {
-			if (gui_handler_list[i] != NULL) {
-				if (gui_item_fast_average) {
-					gui_handler_list[i]((gui_item_value_list[0][i] + gui_item_value_list[1][i])/2.0);
-				} else {
-					gui_handler_list[i](gui_item_value_list[0][i]);
+			if ((gui_item_updated_mask & (1 << i)) == DB_ITEM_HV_CELL_V) {
+				// Indexed item
+				if (gui_indexed_handler_list[i] != NULL) {
+					n = vm_get_indexed_item_count(DB_ITEM_HV_CELL_V);
+					if (n > DB_MAX_CELL_V_VALS) {
+						n  = DB_MAX_CELL_V_VALS;
+					}
+					for (int j=0; j<n; j++) {
+						gui_indexed_handler_list[i](j, gui_cell_v_list[j], (j==(n-1)));
+					}
+				}
+			} else {
+				// Single-value item
+				if (gui_handler_list[i] != NULL) {
+					if (gui_item_fast_average) {
+						gui_handler_list[i]((gui_item_value_list[0][i] + gui_item_value_list[1][i])/2.0);
+					} else {
+						gui_handler_list[i](gui_item_value_list[0][i]);
+					}
 				}
 			}
 		}
@@ -101,6 +121,19 @@ void db_register_gui_callback(uint32_t mask, gui_item_value_handler fcn)
 }
 
 
+void db_register_gui_indexed_callback(uint32_t mask, gui_indexed_item_value_handler fcn)
+{
+	int n;
+	
+	n = _db_mask_to_index(mask);
+	
+	if (n >= 0) {
+		gui_indexed_handler_list[n] = fcn;
+		gui_item_updated_mask &= ~(1 << n);
+	}
+}
+
+
 void db_set_data_item_value(uint32_t mask, float val)
 {
 	int n;
@@ -114,6 +147,27 @@ void db_set_data_item_value(uint32_t mask, float val)
 		gui_item_value_list[0][n] = val;
 	}
 	xSemaphoreGive(update_mutex);
+}
+
+
+void db_set_indexed_data_item_value(uint32_t mask, int index, float val, bool is_final)
+{
+	int n;
+	
+	n = _db_mask_to_index(mask);
+	
+	// Handle known indexed data items
+	if (mask == DB_ITEM_HV_CELL_V) {
+		if (index < DB_MAX_CELL_V_VALS) {
+			xSemaphoreTake(update_mutex, portMAX_DELAY);
+			gui_cell_v_list[index] = val;
+			
+			if (is_final) {
+				gui_item_updated_mask |= (1 << n);
+			}
+			xSemaphoreGive(update_mutex);
+		}
+	}
 }
 
 

@@ -41,8 +41,9 @@
 #define UDS_HV_BATT_INFO  6
 #define UDS_HV_BATT_TEMP  7
 #define UDS_TORQUE        8
+#define UDS_HV_CELL_VOLT  9
 
-#define NUM_UDS_REQ_ITEMS 9
+#define NUM_UDS_REQ_ITEMS 10
 
 
 // Gear position constants
@@ -77,12 +78,15 @@ const vehicle_config_t vehicle_leaf_ze1 =
 	DB_ITEM_HV_BATT_V | DB_ITEM_HV_BATT_I | DB_ITEM_HV_BATT_MIN_T | DB_ITEM_HV_BATT_MAX_T | \
 	DB_ITEM_LV_BATT_V | DB_ITEM_LV_BATT_I | \
 	DB_ITEM_AUX_KW | DB_ITEM_FRONT_TORQUE | \
-	DB_ITEM_SPEED,
-	{-40.0, 160.0},     // power_kw_range - 
+	DB_ITEM_SPEED | \
+	DB_ITEM_HV_CELL_V,
+	96,                 // Number of cells in HV battery
+	{-40.0, 160.0},     // power_kw_range
 	{0.0, 8.0},         // aux_kw_range
 	{-100.0, 250.0},    // torque_nm_range
 	{-150.0, 450.0},    // hv_batt_i_range
 	{10.0, 16.0},       // lv_batt_v_range
+	{3.0, 4.2},         // hv_batt_cell_range
 	true,               // 500k CAN
 	500,                // Request timeout (mSec)
 	_leaf_ze1_init,
@@ -98,15 +102,16 @@ const vehicle_config_t vehicle_leaf_ze1 =
 // Vehicle UDS service CAN request packets (must match list of indicies)
 //
 //                                                 Req ID      Rsp ID         PCI   SID
-static const can_request_t req_gear_position   = {     0x797,      0x79A, 8, {0x03, 0x22, 0x11, 0x56, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_12v_batt_v      = {     0x797,      0x79A, 8, {0x03, 0x22, 0x11, 0x03, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_12v_batt_i      = {     0x797,      0x79A, 8, {0x03, 0x22, 0x11, 0x83, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_lv_aux_pwr      = {     0x797,      0x79A, 8, {0x03, 0x22, 0x11, 0x52, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_ac_aux_pwr      = {     0x797,      0x79A, 8, {0x03, 0x22, 0x11, 0x51, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_speed           = {     0x797,      0x79A, 8, {0x03, 0x22, 0x12, 0x1A, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_hv_batt_info    = {     0x79B,      0x7BB, 8, {0x02, 0x21, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_hv_batt_temp    = {     0x79B,      0x7BB, 8, {0x02, 0x21, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00}};
-static const can_request_t req_torque          = {     0x784,      0x78C, 8, {0x03, 0x22, 0x12, 0x25, 0x00, 0x00, 0x00, 0x00}};
+static const can_request_t req_gear_position   = {     0x797,      0x79A, 8, {0x03, 0x22, 0x11, 0x56, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_12v_batt_v      = {     0x797,      0x79A, 8, {0x03, 0x22, 0x11, 0x03, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_12v_batt_i      = {     0x797,      0x79A, 8, {0x03, 0x22, 0x11, 0x83, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_lv_aux_pwr      = {     0x797,      0x79A, 8, {0x03, 0x22, 0x11, 0x52, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_ac_aux_pwr      = {     0x797,      0x79A, 8, {0x03, 0x22, 0x11, 0x51, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_speed           = {     0x797,      0x79A, 8, {0x03, 0x22, 0x12, 0x1A, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_hv_batt_info    = {     0x79B,      0x7BB, 8, {0x02, 0x21, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_hv_batt_temp    = {     0x79B,      0x7BB, 8, {0x02, 0x21, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_torque          = {     0x784,      0x78C, 8, {0x03, 0x22, 0x12, 0x25, 0x00, 0x00, 0x00, 0x00}, false, 0};
+static const can_request_t req_hv_cell_volt    = {     0x79B,      0x7BB, 8, {0x02, 0x21, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00}, false, 0};
 
 static const can_request_t* req_full_listP[] = {
 	&req_gear_position,
@@ -118,6 +123,7 @@ static const can_request_t* req_full_listP[] = {
 	&req_hv_batt_info,
 	&req_hv_batt_temp,
 	&req_torque,
+	&req_hv_cell_volt,
 };
 
 
@@ -209,6 +215,7 @@ static void _leaf_ze1_set_req_mask(uint32_t mask)
 	required_req[UDS_HV_BATT_INFO]  = vm_mask_check(mask, DB_ITEM_HV_BATT_V | DB_ITEM_HV_BATT_I);
 	required_req[UDS_HV_BATT_TEMP]  = vm_mask_check(mask, DB_ITEM_HV_BATT_MIN_T | DB_ITEM_HV_BATT_MAX_T);
 	required_req[UDS_TORQUE]        = vm_mask_check(mask, DB_ITEM_FRONT_TORQUE);
+	required_req[UDS_HV_CELL_VOLT]  = vm_mask_check(mask, DB_ITEM_HV_CELL_V);
 	
 	// Build up our list of requests and reset starting point
 	num_req_entries = 0;
@@ -367,6 +374,16 @@ static void _leaf_ze1_rx_data(uint32_t id, int len, uint8_t* data)
 					f = -f;
 				}
 				vm_update_data_item(DB_ITEM_FRONT_TORQUE, f);
+			}
+			break;
+		
+		case UDS_HV_CELL_VOLT:
+			if (len == 198) {
+				for (n=0; n<96; n++) {
+					u16 = (data[2 + 2*n] << 8) | data[3 + 2*n];
+					f = ((float) u16) / 1000.0;    // mV -> V
+					vm_update_indexed_data_item(DB_ITEM_HV_CELL_V, n, f, (n == 95));
+				}
 			}
 			break;
 	}

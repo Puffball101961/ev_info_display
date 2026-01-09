@@ -28,15 +28,6 @@
 
 
 //
-// Constants
-//
-
-// Animation time - this should be divisible by the GUI task evaluation
-// interval and also less than the typical time between samples from the car
-#define GUI_TILE_TORQUE_METER_ANIM_MSEC  100
-
-
-//
 // API
 //
 void gui_tile_torque_init(lv_obj_t* parent_tileview, int* tile_index);

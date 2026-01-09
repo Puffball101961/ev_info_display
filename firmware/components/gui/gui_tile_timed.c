@@ -138,7 +138,7 @@ static int64_t start_timestamp;      // ESP32 system uSec since start
 // Forward declarations for internal functions
 //
 static void _gui_tile_timed_set_active(bool en);
-static void _gui_tile_timed_setup_vehicle();
+static bool _gui_tile_timed_setup_vehicle();
 static void _gui_tile_timed_setup_speed_meter();
 static void _gui_tile_timed_setup_timer_display();
 static void _gui_tile_timed_setup_start_btn();
@@ -161,37 +161,39 @@ static void _gui_tile_timed_speed_cb(float val);
 //
 void gui_tile_timed_init(lv_obj_t* parent_tileview, int* tile_index)
 {
-	// Create our object
-	tile = lv_tileview_add_tile(parent_tileview, *tile_index, 0, LV_DIR_LEFT | LV_DIR_RIGHT);
-	*tile_index += 1;
-	
+	bool draw_tile;
+		
 	gui_get_screen_size(&tile_w, &tile_h);
 	
 	// Determine our capabilities
-	_gui_tile_timed_setup_vehicle();
+	draw_tile = _gui_tile_timed_setup_vehicle();
 	
-	// First get our display units
-	units_metric = gui_is_metric();
+	if (draw_tile) {
+		// Create our object
+		tile = lv_tileview_add_tile(parent_tileview, *tile_index, 0, LV_DIR_LEFT | LV_DIR_RIGHT);
+		*tile_index += 1;
 	
-	// Then set units-specific items before we create meters
-	meter_range = (units_metric) ? METER_RANGE_KPH : METER_RANGE_MPH;
-	speed_goal = (units_metric) ? TEST_END_KPH : TEST_END_MPH;
-	
-	// Create display objects
-	if (has_speed) {
-		_gui_tile_timed_setup_speed_meter();
-		_gui_tile_timed_setup_timer_display();
-		_gui_tile_timed_setup_start_btn();
-		_gui_tile_timed_setup_xmas_tree();
+		// Get our display units
+		units_metric = gui_is_metric();
 		
-		// Create our evaluation timer
-		run_eval_timer = lv_timer_create(_gui_tile_timed_run_timer_cb, TIMER_EVAL_MSEC, NULL);
-		lv_timer_set_repeat_count(run_eval_timer, -1);
-		lv_timer_pause(run_eval_timer);
-	}
-	
-	// Register ourselves with our parent if we're capable of displaying something
-	if (has_speed) {
+		// Then set units-specific items before we create meters
+		meter_range = (units_metric) ? METER_RANGE_KPH : METER_RANGE_MPH;
+		speed_goal = (units_metric) ? TEST_END_KPH : TEST_END_MPH;
+		
+		// Create display objects
+		if (has_speed) {
+			_gui_tile_timed_setup_speed_meter();
+			_gui_tile_timed_setup_timer_display();
+			_gui_tile_timed_setup_start_btn();
+			_gui_tile_timed_setup_xmas_tree();
+			
+			// Create our evaluation timer
+			run_eval_timer = lv_timer_create(_gui_tile_timed_run_timer_cb, TIMER_EVAL_MSEC, NULL);
+			lv_timer_set_repeat_count(run_eval_timer, -1);
+			lv_timer_pause(run_eval_timer);
+		}
+		
+		// Register ourselves with our parent if we're capable of displaying something
 		gui_screen_main_register_tile(tile, _gui_tile_timed_set_active);
 	}
 }
@@ -238,13 +240,15 @@ static void _gui_tile_timed_set_active(bool en)
 }
 
 
-static void _gui_tile_timed_setup_vehicle()
+static bool _gui_tile_timed_setup_vehicle()
 {
 	uint32_t capability_mask;
 	
 	capability_mask = vm_get_supported_item_mask();
 	
 	has_speed = (capability_mask & DB_ITEM_SPEED) != 0;
+	
+	return has_speed;
 }
 
 

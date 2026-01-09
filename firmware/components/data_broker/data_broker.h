@@ -54,9 +54,13 @@
 #define DB_ITEM_REAR_TORQUE       0x00002000
 #define DB_ITEM_SPEED             0x00010000
 #define DB_ITEM_GPS_ELEVATION     0x00100000
+#define DB_ITEM_HV_CELL_V         0x01000000
 
 // DB_MASK_ITEMS is a power-of-2 indicating size of mask variable
 #define DB_MAX_ITEMS              32
+
+// Maximum number of supported cells in DB_ITEM_HV_CELL_V
+#define DB_MAX_CELL_V_VALS        192
 
 
 
@@ -64,6 +68,8 @@
 // Callback handler definition
 //
 typedef void (*gui_item_value_handler)(float val);
+typedef void (*gui_indexed_item_value_handler)(int index, float val, bool is_final);
+
 
 
 //
@@ -75,8 +81,10 @@ void db_gui_eval();
 
 // GUI API
 void db_register_gui_callback(uint32_t mask, gui_item_value_handler fcn);
+void db_register_gui_indexed_callback(uint32_t mask, gui_indexed_item_value_handler fcn);
 
 // Vehicle Manager API
 void db_set_data_item_value(uint32_t mask, float val);
+void db_set_indexed_data_item_value(uint32_t mask, int index, float val, bool is_final);
 
 #endif /* DATA_BROKER_H */

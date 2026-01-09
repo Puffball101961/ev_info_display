@@ -69,7 +69,7 @@ static float aux_kw = 0;
 // Forward declarations for internal functions
 //
 static void _gui_tile_power_set_active(bool en);
-static void _gui_tile_power_setup_vehicle();
+static bool _gui_tile_power_setup_vehicle();
 static void _gui_tile_power_setup_power_meter();
 static void _gui_tile_power_setup_aux_meter();
 static void _gui_tile_power_update_power_meter(int32_t val, bool immediate);
@@ -85,26 +85,28 @@ static void _gui_tile_power_aux_cb(float val);
 //
 void gui_tile_power_init(lv_obj_t* parent_tileview, int* tile_index)
 {
-	// Create our object
-	tile = lv_tileview_add_tile(parent_tileview, *tile_index, 0, LV_DIR_LEFT | LV_DIR_RIGHT);
-	*tile_index += 1;
-	
+	bool draw_tile;
+		
 	gui_get_screen_size(&tile_w, &tile_h);
 	
 	// Determine our capabilities
-	_gui_tile_power_setup_vehicle();
+	draw_tile = _gui_tile_power_setup_vehicle();
 	
-	// Create display objects
-	if (has_power) {
-		_gui_tile_power_setup_power_meter();
-	}
-	
-	if (has_aux) {
-		_gui_tile_power_setup_aux_meter();
-	}
-	
-	// Register ourselves with our parent if we're capable of displaying something
-	if (has_power || has_aux) {
+	if (draw_tile) {
+		// Create our object
+		tile = lv_tileview_add_tile(parent_tileview, *tile_index, 0, LV_DIR_LEFT | LV_DIR_RIGHT);
+		*tile_index += 1;
+		
+		// Create display objects
+		if (has_power) {
+			_gui_tile_power_setup_power_meter();
+		}
+		
+		if (has_aux) {
+			_gui_tile_power_setup_aux_meter();
+		}
+		
+		// Register ourselves with our parent if we're capable of displaying something
 		gui_screen_main_register_tile(tile, _gui_tile_power_set_active);
 	}
 }
@@ -149,7 +151,7 @@ static void _gui_tile_power_set_active(bool en)
 }
 
 
-static void _gui_tile_power_setup_vehicle()
+static bool _gui_tile_power_setup_vehicle()
 {
 	uint32_t capability_mask;
 	
@@ -164,6 +166,8 @@ static void _gui_tile_power_setup_vehicle()
 	if (has_aux) {
 		vm_get_range(VM_RANGE_AUX, &aux_min, &aux_max);
 	}
+	
+	return (has_power || has_aux);
 }
 
 
@@ -345,9 +349,9 @@ static void _gui_tile_power_set_power_meter_cb(void* indic, int32_t val)
 {
 	if (val < 0) {
 		lv_arc_set_value(power_pos_arc, 0);
-		lv_arc_set_value(power_neg_arc, ((int32_t) round(-power_min)) + val);
+		lv_arc_set_value(power_neg_arc, -val);
 	} else {
-		lv_arc_set_value(power_neg_arc, (int32_t) round(-power_min));
+		lv_arc_set_value(power_neg_arc, 0);
 		lv_arc_set_value(power_pos_arc, val);
 	}
 }

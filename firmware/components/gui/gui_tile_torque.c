@@ -79,7 +79,7 @@ static int32_t elevation;            // Meters or Feet
 // Forward declarations for internal functions
 //
 static void _gui_tile_torque_set_active(bool en);
-static void _gui_tile_torque_setup_vehicle();
+static bool _gui_tile_torque_setup_vehicle();
 static void _gui_tile_torque_setup_torque_meter();
 static void _gui_tile_torque_setup_speed_display();
 static void _gui_tile_torque_setup_elevation_display();
@@ -95,35 +95,37 @@ static void _gui_tile_torque_elevation_cb(float val);
 
 void gui_tile_torque_init(lv_obj_t* parent_tileview, int* tile_index)
 {
-	// Create our object
-	tile = lv_tileview_add_tile(parent_tileview, *tile_index, 0, LV_DIR_LEFT | LV_DIR_RIGHT);
-	*tile_index += 1;
+	bool draw_tile;
 	
 	gui_get_screen_size(&tile_w, &tile_h);
 	
 	// Determine our capabilities
-	_gui_tile_torque_setup_vehicle();
+	draw_tile = _gui_tile_torque_setup_vehicle();
 	
-	// Create display objects
-	if (has_torque[FRONT_TORQUE] || has_torque[REAR_TORQUE]) {
-		_gui_tile_torque_setup_torque_meter();
-	}
-	
-	if (has_speed) {
-		_gui_tile_torque_setup_speed_display();
-	}
-	
-	if (has_elevation) {
-		_gui_tile_torque_setup_elevation_display();
-	}
-	
-	// Register ourselves with our parent if we're capable of displaying something
-	if (has_torque[FRONT_TORQUE] || has_torque[REAR_TORQUE]) {
+	if (draw_tile) {
+		// Create our object
+		tile = lv_tileview_add_tile(parent_tileview, *tile_index, 0, LV_DIR_LEFT | LV_DIR_RIGHT);
+		*tile_index += 1;
+		
+		// Create display objects
+		if (has_torque[FRONT_TORQUE] || has_torque[REAR_TORQUE]) {
+			_gui_tile_torque_setup_torque_meter();
+		}
+		
+		if (has_speed) {
+			_gui_tile_torque_setup_speed_display();
+		}
+		
+		if (has_elevation) {
+			_gui_tile_torque_setup_elevation_display();
+		}
+		
+		// Register ourselves with our parent if we're capable of displaying something
 		gui_screen_main_register_tile(tile, _gui_tile_torque_set_active);
+		
+		// Get our display units
+		units_metric = gui_is_metric();
 	}
-	
-	// Get our display units
-	units_metric = gui_is_metric();
 }
 
 
@@ -179,7 +181,7 @@ static void _gui_tile_torque_set_active(bool en)
 }
 
 
-static void _gui_tile_torque_setup_vehicle()
+static bool _gui_tile_torque_setup_vehicle()
 {
 	uint32_t capability_mask;
 	
@@ -192,6 +194,10 @@ static void _gui_tile_torque_setup_vehicle()
 	
 	if (has_torque[FRONT_TORQUE] || has_torque[REAR_TORQUE]) {
 		vm_get_range(VM_RANGE_TORQUE, &torque_min, &torque_max);
+		
+		return true;
+	} else {
+		return false;
 	}
 }
 
@@ -389,9 +395,9 @@ static void _gui_tile_torque_set_torque_meter_cb(void* indic, int32_t val)
 	
 	if (val < 0) {
 		lv_arc_set_value(pos_arc, 0);
-		lv_arc_set_value(neg_arc, ((int32_t) round(-torque_min)) + val);
+		lv_arc_set_value(neg_arc, -val);
 	} else {
-		lv_arc_set_value(neg_arc, (int32_t) round(-torque_min));
+		lv_arc_set_value(neg_arc, 0);
 		lv_arc_set_value(pos_arc, val);
 	}
 }
