@@ -6,8 +6,9 @@ Firmware for an EV performance information gauge using the [Waveshare ESP32-S3 2
 EV Info Display can show several screens showing information not typically displayed on most EV dashboards but interesting none-the-less.  Note that not all data is displayed for various supported EVs (it's based on what the vehicle can provide).
 
 1. Speed/Torque/Elevation
-2. Power consumption (kW) and Auxiliary systems power consumption
+2. Power consumption/regeneration (kW) and Auxiliary systems power consumption
 3. Traction and low-voltage battery voltage, temperature and current
+4. Individual traction battery cell voltages
 
 In addition it contains a speed test screen allowing timing of the vehicle 0-60 MPH (0-100 KPH) performance.
 
@@ -43,24 +44,33 @@ There are two arcs for AWD vehicles (outside arc is rear drive, inside arc is fr
 #### Power Consumption
 ![Screen 2: Power](pictures/gui_tile_power.jpg)
 
-Primary display shows traction power or regeneration.
+Primary display shows traction power or regeneration.  Traction power is a positive number and regeneration (or charging) is a negative number).
 
-Auxiliary power consumption is vehicle-specific but usually contains low-voltage (12V) system consumption and high-voltage items such as heating/cooling and battery warming.  Depending on the vehicle auxiliary high-voltage consumers may also be reflected in the primary consumption display.
+Auxiliary power consumption is vehicle-specific but usually contains low-voltage (12V) system consumption and high-voltage items such as heating/cooling and battery warming.  Depending on the vehicle, auxiliary high-voltage consumers may also be reflected in the primary consumption display.
 
 #### Electrical Information
 ![Screen 3: Electrical](pictures/gui_tile_electrical.jpg)
 
-Primary display shows traction battery current with the arc display and digital readout and battery voltage and min/max pack temperatures.  Traction current is displayed as a positive number and regeneration current as a negative number.
+Primary display shows traction battery current with the arc display and digital readout and battery voltage and min/max pack temperatures.  Traction current is displayed as a positive number and regeneration/charging current as a negative number.
 
 The secondary display shows the low voltage battery voltage with the arc display and digital readout and current (charge current is positive, discharge current is negative) as well as temperature if it is available.
 
+#### Traction Battery Cell Voltages
+![Screen 4: Cell Voltages](pictures/gui_tile_cells.jpg)
+
+Displays a bar graph of individual traction battery cell voltages.  The minimum and maximum cell voltage and cell number are displayed above and the delta voltage below.  The graph is scaled between 3.0 and 4.2 volts to quickly get a sense of pack condition and to visualize voltage sags in cells under load.
+
+The minimum voltage cell bar is red and the maximum voltage cell bar is yellow.  All other cell bars are blue.
+
+Note: On some platforms like VW MEB, each cell voltage is read using a separate OBD request making updates fairly slow when using an ELM327 interface.
+
 #### Speed Test
-![Screen 4: Speed Test](pictures/gui_tile_timed.jpg)
+![Screen 5: Speed Test](pictures/gui_tile_timed.jpg)
 
 This screen allows you to time the vehicle's 0-60 MPH (0-100 KPH) performance with a fun race-track style display.  The vehicle must be stopped to initiate the test.  Pressing the ```START``` button starts the countdown timer with one LED blinking per second and set of tones.  Try to start your run just as the green LED flashes although the timer actually starts when the first non-zero speed is read.  Time timer stops when the vehicle reaches 60 MPH (100 KPH).  Jump starts or uncompleted runs result in a red LED flashing at the end.
 
 #### Settings Screen
-![Screen 5: Setup](pictures/settings_screen.jpg)
+![Screen 6: Setup](pictures/settings_screen.jpg)
 
 The settings screen configures display operation.
 
@@ -102,6 +112,7 @@ Click ```X``` to cancel, ```√``` to set the entry.  Then in the Wifi Setup win
 1. Wifi and BLE connections are significantly slower than a direct CAN connection.  This is due to the overhead of managing the ELM327 interface when the vehicle uses different CAN IDs for each datum that is read.  Performance varies by vehicle type.  For example the VW MEB platform is much slower than the Nissan Leaf ZE1 platform.  The Leaf only uses a few CAN IDs while the VW MEB platform uses many more requiring a lot more communication overhead.  EV Info Display attempts to optimize configuring the ELM327 interface, only changing the necessary configuration to minimize overhead.  Best performance is always obtained using a direct CAN interface because there is no overhead.
 2. I have seen, on rare occasion, the VW MEM platform stop replying to particular query items resulting in a frozen value for that item.  Powering off the car and turning it back on fixes the problem.
 3. There is a bug in the Espressif IDF when using BLE.  EV Info Display will attempt to repeatedly poll for BLE devices to connect too.  However randomly the polling process will crash the ESP32 and reboot the device.  I tried to debug this but I think it's deep in some "blob" code.  During normal operation it shouldn't pose much of a problem as EV Info Display will immediately connect to the BLE interface module.
+4. The Cell Voltage graph glitches slightly when swiping.  I think this is an issue of PSRAM access (where the drawing canvas is stored) and the LCD Update peripheral.
 
 ### Installation
 Please see below for information about a 3D printed enclosure that can be used to hold the Waveshare board.
@@ -165,6 +176,7 @@ The firmware logs various events to the native USB Serial port.
 |---|---|
 | 0.1 | Initial Release |
 | 0.2 | MEB Reverse bug fix, smoother display and minor cleanup<br>1. Add slight averaging for data when using TWAI (direct CAN) IF for smoother numeric displays (less jittery).<br> 2. Reduce number of averaged timestamps to compute largee arc change delta time intervals for smoother updates.<br> 3. Stop any ongoing arc animations on each update to prevent occasional apparent jumps in meter position.<br> 4. Detect MEB platform gear position to correctly display positive torque during reverse.<br> 5. Add untested support for Vgate iCan Pro 4.0 BLE dongle.<br> 6.  Misc code cleanup. |
+| 0.3 | 1. Added Traction Battery Cell Voltage tile.<br>2. Fixed a bug in the data smoothing when an ELM327 interface is selected.<br>3. Added vehicle support for indexed data items.<br>4. Moved to LVGL v8.3.11 (from v8.2).<br>5. Fixed a bug where tile would be shown even if vehicle didn’t support its items.<br>6. Increased task stack size. |
 
 ### Programming pre-compiled firmware
 The built binaries may be found in the ```precompiled``` directory in this repo.  There are a variety of ways to load these into the Waveshare board, including using the IDF, Espressif's Windows-only utility program or their web-browser based serial flasher described here.
