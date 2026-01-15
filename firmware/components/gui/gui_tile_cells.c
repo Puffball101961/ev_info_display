@@ -93,7 +93,7 @@ static void _gui_tile_cells_setup_delta_display();
 static void _gui_tile_cells_compute_and_update_all();
 static void _gui_tile_cells_update_canvas(int min_cell, int max_cell);
 static void _gui_tile_cells_draw_vline(lv_coord_t x, lv_coord_t y1, lv_coord_t y2, lv_color_t c);
-static void _gui_tile_cells_update_min_max_display(float min_val, int min_cell, float max_val, int max_cell);
+static void _gui_tile_cells_update_min_max_display(float min_val, int min_cell_num, float max_val, int max_cell_num);
 static void _gui_tile_cells_update_delta_display(float delta_val);
 static void _gui_tile_cells_set_cell_v_cb(int index, float val, bool is_final);
 
@@ -239,7 +239,7 @@ static void _gui_tile_cells_compute_and_update_all()
 	}
 		
 	_gui_tile_cells_update_canvas(min_index, max_index);
-	_gui_tile_cells_update_min_max_display(cur_min, min_index, cur_max, max_index);
+	_gui_tile_cells_update_min_max_display(cur_min, min_index+1, cur_max, max_index+1);
 	_gui_tile_cells_update_delta_display(cur_max - cur_min);
 }
 
@@ -297,11 +297,11 @@ static void _gui_tile_cells_draw_vline(lv_coord_t x, lv_coord_t y1, lv_coord_t y
 }
 
 
-static void _gui_tile_cells_update_min_max_display(float min_val, int min_cell, float max_val, int max_cell)
+static void _gui_tile_cells_update_min_max_display(float min_val, int min_cell_num, float max_val, int max_cell_num)
 {
-	static char min_max_str[40];             // "X.XXX V (NNN) / X.XXX V (NNN)"
+	static char min_max_str[48];             // "X.XXX V (NNN) / X.XXX V (NNN)"
 	
-	sprintf(min_max_str, "%1.3f V (%d) / %1.3f V (%d)", min_val, min_cell, max_val, max_cell);
+	sprintf(min_max_str, "%1.3f V (%d) / %1.3f V (%d)", min_val, min_cell_num, max_val, max_cell_num);
 	lv_label_set_text_static(min_max_lbl, min_max_str);
 }
 
