@@ -58,7 +58,7 @@
 //   Note: this dumps the screen raw hex data to the USB debug log output when
 //   the button attached to IO0 is pressed.  The GUI is frozen while the dump is
 //   occurring.  The intent is to capture the log file with a special program
-//   that will display the screen image for capture the attached computer.
+//   that will display the screen image for capture on the attached computer.
 //#define ENABLE_SCREENDUMP
 
 
