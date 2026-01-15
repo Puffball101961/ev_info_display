@@ -68,7 +68,7 @@ esp_err_t db_init()
 
 void db_enable_fast_average(bool en)
 {
-	gui_item_fast_average = true;
+	gui_item_fast_average = en;
 }
 
 
