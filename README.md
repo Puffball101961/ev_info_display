@@ -25,7 +25,7 @@ EV Info Display has been tested with the following ELM327 OBD2 modules.
 
 Currently supported vehicles include
 
-1. VW MEB platform vehicles such as the ID.4 (RWD / AWD)
+1. VW MEB platform vehicles with 96-cell traction batteries such as the ID.4 (RWD / AWD)
 2. Nissan Leaf ZE1 (2018-2025 models)
 
 The firmware is designed to allow easy addition of new vehicles.  Feel free to reach out to me about adding new vehicles.  You'll need the OBD2/CAN bus transactions necessary to get the various datums and a vehicle to test in.
@@ -44,7 +44,7 @@ There are two arcs for AWD vehicles (outside arc is rear drive, inside arc is fr
 #### Power Consumption
 ![Screen 2: Power](pictures/gui_tile_power.jpg)
 
-Primary display shows traction power or regeneration.  Traction power is a positive number and regeneration (or charging) is a negative number).
+Primary display shows traction power or regeneration.  Traction power is a positive number and regeneration (or charging) is a negative number.
 
 Auxiliary power consumption is vehicle-specific but usually contains low-voltage (12V) system consumption and high-voltage items such as heating/cooling and battery warming.  Depending on the vehicle, auxiliary high-voltage consumers may also be reflected in the primary consumption display.
 
@@ -197,6 +197,24 @@ Upon a successful flash you should see something like the following.
 When done press the Reset button on the Waveshare board to start running the code and display the splash screen.
 
 ![EV Info Display boot screen](pictures/splash_screen.jpg)
+
+### Firmware Architecture
+
+![Firmware Architecture Block Diagram](pictures/fw_arch.jpg)
+
+The firmware consists of two FreeRTOS tasks, each running on a separate core.  [LVGL](https://lvgl.io/) is used to provide the graphical user interface.
+
+```can_task()``` running on the Protocol (PRO) core manages communication over the OBD port, requesting various datums and providing that information to ```gui_task()``` running on the Application (APP) core via a thread-safe Data Broker.
+
+The CAN Task consists of two components.  The Vehicle Manager evaluates logic in the selected vehicle module to generate OBD CAN message requests, one at a time.  This logic is responsible for vehicle-specific actions, such as requesting HV voltage and current and then returning the Power datum to the GUI for display.  The CAN Manager forwards the OBD CAN message requests through the selected driver, which may convert its form as necessary (for example into ELM327 serial stream commands), and then takes the response and provides that back to the vehicle module for processing.  The TWAI driver sends the request directly through the ESP32's TWAI interface.  The ELM327 converts the request into a series of one or more ELM327 serial stream data packets.  These packets are sent through the selected BLE or Wifi stacks.  The ELM327 driver attempts to minimize the number of serial stream data packets sent to the ELM327 controller to improve performance since only one packet may be sent at a time and the driver must wait for an acknowledgement.
+
+The GUI Task initializes LVGL and then acts as an event broker for various incoming data and internal LVGL events.  The GUI is organized as a series of screens for the various functions of the device.  The Main Screen contains a series of full-screen tiles for each of the main displays that can be swiped between.  Each Main Screen tile registers a set of datums that it wants through the Data Broker with the Vehicle Manager.  The registration contains the datum and a callback routine to receive the data (which is atomically synchronized by the Data Broker).
+
+A Persistent Storage module, implemented using the ESP32's NVRAM flash abstraction, configures both tasks.  It may be updated by the GUI Task.  In order to simplify the software architecture, other than backlight brightness, all changes to persistent storage are only applied at power-on, necessitating a reset after changes are made.
+
+#### Adding a new vehicle type
+
+There is no standardization of OBD commands in the BEV world so each different vehicle type requires its own vehicle specific module consisting of a ```.c``` and ```.h``` file that are included in the ```vehicle``` sub-directory and used in the```vehicle_manager.c``` file.  This module contains a list of OBD commands to send for the various items necessary to get all supported datums.  It also contains a set of logic that is periodically evaluated by the Vehicle Manager which sends one command at a time and handles the responses from the CAN Manager.  This logic may be configured for the specific set of datums the currently displayed tile requires.  It is responsible for taking vehicle-specific pieces of data and creating the datums that the firmware defines in ```data_broker.h```.
 
 ### Enclosures
 See the ```enclosure``` directory for CAD files for a simple 3D-printed enclosure.  It can be printed in two forms.
