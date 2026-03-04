@@ -36,10 +36,10 @@
 //
 
 // Uncomment to debug TX/RX data
-//#define DEBUG_SHOW_DATA
+// #define DEBUG_SHOW_DATA
 
 // Uncomment to debug initialization
-//#define DEBUG_SHOW_INIT
+// #define DEBUG_SHOW_INIT
 
 // Operational state
 #define OP_ST_DISCONNECTED  0
@@ -430,7 +430,8 @@ static void _can_driver_elm327_task()
 
 				// Version handling
 				ESP_LOGI(TAG, "Found ELM327 v%s", elm327_version_string);
-				elm327_is_v15 = (strcmp(elm327_version_string, "1.5") == 0);
+				// elm327_is_v15 = (strcmp(elm327_version_string, "1.5") == 0);
+				elm327_is_v15 = true;
 			}
 		}
 		

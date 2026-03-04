@@ -73,8 +73,8 @@ static uint16_t tile_w;
 static uint16_t tile_h;
 static int32_t hv_v = 0;
 static int32_t hv_i = 0;
-static int32_t hv_t_min = 0;
-static int32_t hv_t_max = 0;
+static float hv_t_min = 0;
+static float hv_t_max = 0;
 static float lv_v = 0;
 static float lv_i = 0;
 static int32_t lv_t = 0;
@@ -95,7 +95,7 @@ static void _gui_tile_electrical_setup_lv_t_display();
 static void _gui_tile_electrical_update_hv_i_meter(int32_t val, bool immediate);
 static void _gui_tile_electrical_set_hv_i_meter_cb(void* indic, int32_t val);
 static void _gui_tile_electrical_update_hv_v_display(int32_t val);
-static void _gui_tile_electrical_update_hv_t_display(bool has_min, int32_t min, bool has_max, int32_t max);
+static void _gui_tile_electrical_update_hv_t_display(bool has_min, float min, bool has_max, float max);
 static void _gui_tile_electrical_update_lv_v_meter(float val);
 static void _gui_tile_electrical_update_lv_i_display(float val);
 static void _gui_tile_electrical_update_lv_t_display(int32_t val);
@@ -190,13 +190,13 @@ static void _gui_tile_electrical_set_active(bool en)
 			if (has_hv_min_t) {
 				db_register_gui_callback(DB_ITEM_HV_BATT_MIN_T, _gui_tile_electrical_hv_min_t_cb);
 				req_mask |= DB_ITEM_HV_BATT_MIN_T;
-				hv_t_min = 0;
+				hv_t_min = 0.0f;
 			}
 			
 			if (has_hv_max_t) {
 				db_register_gui_callback(DB_ITEM_HV_BATT_MAX_T, _gui_tile_electrical_hv_max_t_cb);
 				req_mask |= DB_ITEM_HV_BATT_MAX_T;
-				hv_t_max = 0;
+				hv_t_max = 0.0f;
 			}
 			
 			if (has_hv_min_t || has_hv_max_t) {
@@ -480,7 +480,7 @@ static void _gui_tile_electrical_update_hv_v_display(int32_t val)
 }
 
 
-static void _gui_tile_electrical_update_hv_t_display(bool has_min, int32_t min, bool has_max, int32_t max)
+static void _gui_tile_electrical_update_hv_t_display(bool has_min, float min, bool has_max, float max)
 {
 	static char hv_t_lbl[32];            // "-XX °C / -XX °C"
 	int len;
@@ -488,7 +488,7 @@ static void _gui_tile_electrical_update_hv_t_display(bool has_min, int32_t min, 
 	hv_t_lbl[0] = 0;
 	
 	if (has_min) {
-		sprintf(hv_t_lbl, "%ld", min);
+		sprintf(hv_t_lbl, "%.1f", min);
 	}
 	
 	if (has_min && has_max) {
@@ -498,7 +498,7 @@ static void _gui_tile_electrical_update_hv_t_display(bool has_min, int32_t min, 
 	
 	if (has_max) {
 		len = strlen(hv_t_lbl);
-		sprintf(&hv_t_lbl[len], "%ld", max);
+		sprintf(&hv_t_lbl[len], "%.1f", max);
 	}
 	
 	len = strlen(hv_t_lbl);
@@ -583,8 +583,9 @@ static void _gui_tile_electrical_hv_i_cb(float val)
 
 static void _gui_tile_electrical_hv_min_t_cb(float val)
 {
-	int32_t t;
+	float t;
 	
+	// Updated to round to 1 decimal place
 	t = round((units_metric) ? val : gui_util_c_to_f(val));
 	
 	if (t != hv_t_min) {
@@ -596,8 +597,9 @@ static void _gui_tile_electrical_hv_min_t_cb(float val)
 
 static void _gui_tile_electrical_hv_max_t_cb(float val)
 {
-	int32_t t;
+	float t;
 	
+	// Updated to round to 1 decimal place
 	t = round((units_metric) ? val : gui_util_c_to_f(val));
 	
 	if (t != hv_t_max) {
