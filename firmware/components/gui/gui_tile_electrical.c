@@ -585,8 +585,7 @@ static void _gui_tile_electrical_hv_min_t_cb(float val)
 {
 	float t;
 	
-	// Updated to round to 1 decimal place
-	t = round((units_metric) ? val : gui_util_c_to_f(val));
+	t = (units_metric) ? val : gui_util_c_to_f(val);
 	
 	if (t != hv_t_min) {
 		_gui_tile_electrical_update_hv_t_display(has_hv_min_t, t, has_hv_max_t, hv_t_max);
@@ -599,8 +598,7 @@ static void _gui_tile_electrical_hv_max_t_cb(float val)
 {
 	float t;
 	
-	// Updated to round to 1 decimal place
-	t = round((units_metric) ? val : gui_util_c_to_f(val));
+	t = (units_metric) ? val : gui_util_c_to_f(val);
 	
 	if (t != hv_t_max) {
 		_gui_tile_electrical_update_hv_t_display(has_hv_min_t, hv_t_min, has_hv_max_t, t);
